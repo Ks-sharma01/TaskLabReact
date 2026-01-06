@@ -1,10 +1,12 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import TaskCart from "../components/TaskCart";
 import Index from "./Index";
 import Model from "../components/Model";
+import { fetchWithAuth } from "../api/fetchWithAuth";
 
 const Home = () => {
     const [open, setOpen] = useState(false);
+    const [selectedId, setSelectedId] = useState(null);
     const [formData, setFormData] = useState({
         TaskTitle: "",
         TaskDescription: "",
@@ -25,8 +27,6 @@ const Home = () => {
             [name]: ""
         }))
     }
-
-   
 
     const validate = () => {
         const newErrors = {};
@@ -57,7 +57,7 @@ const Home = () => {
         const token = localStorage.getItem("token")
                     console.log(formData);
                     console.log(token);
-
+      
         try{
             const api = await fetch("https://localhost:7284/api/Home/AddTask", {
                 method : "POST",
@@ -76,15 +76,54 @@ const Home = () => {
         }
 
     }
+    useEffect(()=>{
+        if (!selectedId) return;
+        fetchDataToEdit();
+
+    }, [selectedId])
+        console.log(selectedId)
+
+       const fetchDataToEdit = async() =>{
+            const fetchedData = await fetchWithAuth(`https://localhost:7284/api/Home/TaskById/${selectedId}`,{
+                method: "GET"
+        })
+        const result = await fetchedData.json();
+        const data = Array.isArray(result) ? result[0] : result;
+
+        console.log(data);
+
+            setFormData({
+                TaskTitle: data.taskTitle,
+                TaskDescription: data.taskDescription,
+                TaskStatus: data.taskStatus,
+                TaskDueDate: data.taskDueDate,
+                TaskRemarks: data.taskRemarks
+            })
+        }
+         
+        useEffect(()=>{
+            EditData();
+        }, [])
+            const EditData = async() =>{
+                const api = await fetchWithAuth(`https://localhost:7284/api/Home/UpdateTask/${selectedId}`,{
+                    method : "PUT",
+                   
+                })
+                const data = await api.json();
+                setFormData(data);
+                setOpen(false);
+            }
+    
+    console.log(formData)
+
     return (
         <div>
-
             <Index>
                 <div className="flex justify-end mb-2 ">
                     <button onClick={() => setOpen(true)} className="border shadow px-6 rounded py-2 bg-blue-500 font-bold text-white cursor-pointer hover:bg-gray-500">Add </button>
                 </div>
-                <Model isOpen={open} onClose={() => setOpen(false)}>
-                    <form className="space-y-2" onSubmit={handleSubmit}>
+                <Model isOpen={open} onClose={() => setOpen(false)} task = {selectedId}>
+                    <form className="space-y-2" onSubmit={selectedId ? EditData : handleSubmit}>
 
                         <div className="flex flex-col">
                             <input onChange={handleChange}
@@ -113,7 +152,7 @@ const Home = () => {
                                 onChange={handleChange}
                                 value={formData.TaskStatus}
                                 className={`w-full outline-none rounded-md border ${error.TaskStatus ? "border-red-400 focus:ring-red-500" : "border-gray-300 focus:ring-blue-500"} bg-gray-100 px-2 py-2 focus:ring-1`}>
-                                <option value={""} selected disabled hidden>Select an option</option>
+                                <option value=""  disabled hidden>Select an option</option>
                                 <option value="Pending">Pending</option>
                                 <option value="OnHold">On Hold</option>
                                 <option value="Finished">Finished</option>
@@ -148,7 +187,7 @@ const Home = () => {
                                 value={formData.TaskDueDate}
                                 name="TaskDueDate"
                                 className={`w-full outline-none rounded-md border ${error.TaskDueDate ? "border-red-400 focus:ring-red-500" : "border-gray-300 focus:ring-blue-500"} bg-gray-100 px-2 py-2 focus:ring-1`}
-                            />
+                                />
 
                         {
                             error.TaskDueDate && (
@@ -159,12 +198,12 @@ const Home = () => {
 
                         <div className="flex justify-start">
                             <button type="submit" className="px-4 py-2 rounded-md font-semibold text-white bg-green-600 cursor-pointer hover:bg-green-500 focus:outline-none focus:ring-2 focus:ring-green-500">
-                                Submit
+                                {selectedId ? "Update" : "Add"}
                             </button>
                         </div>
                     </form>
                 </Model>
-                <TaskCart />
+                <TaskCart modal = {setOpen}  setSelectedId = {setSelectedId}/>
             </Index>
         </div>
     )
