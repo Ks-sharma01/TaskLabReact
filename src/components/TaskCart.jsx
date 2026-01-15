@@ -86,8 +86,7 @@ const sendEditData = async(id)=>{
          <p className="text-gray-500 text-sm col-span-full text-center">
             No tasks found
           </p>
-      )
-      
+      )    
       }
         </div>
         </div>
